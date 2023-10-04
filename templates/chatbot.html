@@ -45,29 +45,7 @@
                 chatLi.html(chatContent);
                 return chatLi;
             }
-            //needs to be changed, no proper response form the server
-            const generateResponse = (chatElement,userMessage) => {
-                const API_URL = "/chatbot"; // Flask API endpoint
-                const messageElement = chatElement.find("p");
-                const conversation = [userMessage]; // User's message];
-                console.log(conversation);
-                $.ajax({
-                    type: "POST",
-                    url: API_URL,
-                    contentType: "application/json",
-                    data: JSON.stringify({ "message": userMessage }), // send the user message as a JSON object with a key of "message"
-                    success: function (data) {
-                        messageElement.text(data.response);
-                    },
-                    error: function () {
-                        messageElement.addClass("error").text("Oops! Something went wrong. Please try again.");
-                    },
-                    complete: function () {
-                        chatbox.scrollTop(chatbox[0].scrollHeight);
-                    }
-                });
-            }
-
+           
             const handleChat = () => {
                 userMessage = chatInput.val().trim();
                 if (!userMessage) return;
@@ -85,6 +63,59 @@
                     generateResponse(incomingChatLi,userMessage);
                 }, 600);
             }
+            
+
+            const generateResponse = (chatElement, userMessage) => {
+                // Create a WebSocket connection
+                
+                const ws = new WebSocket('wss://public.backend.medisearch.io:443/ws/medichat/api');
+                function generateID() {
+                    var id = '';
+                    var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+                    for (var i = 0; i < 32; i++) {
+                        id += characters.charAt(Math.floor(Math.random() * characters.length));
+                    }
+                    return id;
+                }
+
+                // Generate the conversation ID
+                const conversation_id = generateID()
+
+                // Prepare the userConversation object with the user's message
+                const userConversation = {
+                    event: "user_message",
+                    conversation: [userMessage],
+                    key: "<apikeyhere>", // Replace with your API key
+                    id: conversation_id, // Use the same conversation ID generated earlier
+                    settings: {
+                        language: "English"
+                    }
+                };
+                // WebSocket message handler
+                ws.onmessage = function (event) {
+                    const strData = event.data.toString('utf8');
+                    const jsonData = JSON.parse(strData);
+                    const responseMessage = jsonData.text;
+                    if (jsonData.event === "articles") {
+                        console.log("Got articles");
+                        // Handle articles response here
+                    } else if (jsonData.event === "llm_response") {
+                        console.log("Got llm response");
+                        chatElement.remove();
+                        chatbox.append(createChatLi(responseMessage, "incoming")); // Add the response to the chatbox
+                        chatbox.scrollTop(chatbox[0].scrollHeight); // Scroll to the bottom
+                    } else if (jsonData.event === "error") {
+                        console.log("Got error");
+                    }
+                };
+
+                // WebSocket is open, send the userConversation
+                ws.onopen = function () {
+                    ws.send(JSON.stringify(userConversation));
+                };
+            };
+
+            
 
             chatInput.on("input", () => {
                 chatInput.css("height", `${inputInitHeight}px`);
