@@ -17,9 +17,7 @@
                 <p>Hi there👋<br> How can i help you today?</p>
             </li>
             <li class="chat outgoing">
-                <p>Color, sit amet consectetur adipisicing elit. 
-                    Consectetur perferendis laboriosam aLorem ipsum drchitecto 
-                </p>
+
             </li>
         </ul>
         <div class="chat-input">
@@ -85,7 +83,7 @@
                 const userConversation = {
                     event: "user_message",
                     conversation: [userMessage],
-                    key: "<apikeyhere>", // Replace with your API key
+                    key: "<yourAPIkey>", // Replace with your API key
                     id: conversation_id, // Use the same conversation ID generated earlier
                     settings: {
                         language: "English"
@@ -98,10 +96,17 @@
                     const responseMessage = jsonData.text;
                     if (jsonData.event === "articles") {
                         console.log("Got articles");
-                        // Handle articles response here
+                        chatbox.find('.incoming'); // Remove the "Thinking..." message
+                        chatbox.append(createChatLi("Here are some articles that might help:", "incoming")); // Add the response to the chatbox
+                        for (let i = 0; i < jsonData.articles.length; i++) {
+                            const article = jsonData.articles[i];
+                            const articleLink =article.url;
+                            chatbox.append(createChatLi(articleLink, "incoming"));
+                    }
+                    chatbox.scrollTop(chatbox[0].scrollHeight); // Scroll to the bottom
                     } else if (jsonData.event === "llm_response") {
                         console.log("Got llm response");
-                        chatElement.remove();
+                        chatbox.find('.incoming').last().remove(); // Remove the "Thinking..." message
                         chatbox.append(createChatLi(responseMessage, "incoming")); // Add the response to the chatbox
                         chatbox.scrollTop(chatbox[0].scrollHeight); // Scroll to the bottom
                     } else if (jsonData.event === "error") {
